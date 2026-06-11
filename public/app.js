@@ -442,6 +442,16 @@ input.addEventListener("input", () => {
 
 input.addEventListener("blur", () => setTimeout(closeMentionMenu, 150));
 
+// Shorter placeholder where the long one would clip
+const narrow = window.matchMedia("(max-width: 560px)");
+function fitPlaceholder() {
+  input.placeholder = narrow.matches
+    ? "Ask anything — or @ a sage…"
+    : "Ask anything — or summon someone with @ (try @Rashi)…";
+}
+narrow.addEventListener("change", fitPlaceholder);
+fitPlaceholder();
+
 loadSages().catch(() => {
   blurbEl.textContent = "Couldn't load the sages — is the server running? (npm start)";
 });
