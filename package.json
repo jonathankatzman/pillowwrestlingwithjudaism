@@ -1,0 +1,18 @@
+{
+  "name": "pillow-wrestling-with-judaism",
+  "version": "1.0.0",
+  "description": "Wrestling with Judaism — gently. Ask modern questions, get answers grounded in Jewish texts via Sefaria, voiced by sages from Hillel to Rabbi Sacks.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "express": "^4.19.2"
+  }
+}
