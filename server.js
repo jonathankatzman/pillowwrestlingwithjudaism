@@ -18,7 +18,7 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const MODEL = "claude-opus-4-8";
+const MODEL = "claude-sonnet-4-6";
 const SEFARIA = "https://www.sefaria.org";
 const MAX_AGENT_TURNS = 8;
 
@@ -265,8 +265,7 @@ app.post("/api/ask", async (req, res) => {
     for (let turn = 0; turn < MAX_AGENT_TURNS; turn++) {
       const stream = client.messages.stream({
         model: MODEL,
-        max_tokens: 64000,
-        thinking: { type: "adaptive" },
+        max_tokens: 8096,
         system,
         tools: TOOLS,
         messages,
