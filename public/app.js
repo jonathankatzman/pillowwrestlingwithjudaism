@@ -2,6 +2,8 @@
 
 const chatEl = document.getElementById("chat");
 const welcomeEl = document.getElementById("welcome");
+const chatToolsEl = document.getElementById("chatTools");
+const newChatBtn = document.getElementById("newChatBtn");
 const railEl = document.getElementById("sageRail");
 const blurbEl = document.getElementById("sageBlurb");
 const startersEl = document.getElementById("starters");
@@ -11,23 +13,88 @@ const sendBtn = document.getElementById("sendBtn");
 
 let sages = [];
 let currentSage = null;
-let history = []; // [{role, content}] — plain strings only
+// [{role, content, sage?, sources?}] — role/content go to the server;
+// sage (id) and sources are kept so assistant turns can be re-rendered.
+let history = [];
 let busy = false;
+let controller = null; // AbortController for the in-flight /api/ask
+
+const MAX_SENT_MESSAGES = 30;   // matches the server's history cap
+const MAX_MESSAGE_CHARS = 4000; // matches the server's per-message cap
+const MAX_STORED_MESSAGES = 200;
+
+// ——— Persistence ———
+// Everything goes through try/catch: private mode, blocked storage or a
+// full quota must never break the conversation itself.
+
+const STORE_KEY = "pwwj:v1";
+
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return data && typeof data === "object" ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStore() {
+  try {
+    localStorage.setItem(
+      STORE_KEY,
+      JSON.stringify({
+        sage: currentSage?.id ?? null,
+        messages: history.slice(-MAX_STORED_MESSAGES),
+      })
+    );
+  } catch {
+    // storage unavailable — the conversation just won't survive a reload
+  }
+}
+
+function cleanSources(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (s) => s && typeof s.ref === "string" && typeof s.url === "string" && /^https?:\/\//i.test(s.url)
+  );
+}
+
+function cleanStoredMessages(list) {
+  if (!Array.isArray(list)) return [];
+  const msgs = list
+    .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content)
+    .map((m) =>
+      m.role === "user"
+        ? { role: "user", content: m.content }
+        : { role: "assistant", content: m.content, sage: typeof m.sage === "string" ? m.sage : null, sources: cleanSources(m.sources) }
+    );
+  // An unanswered question at the end is a turn that never finished
+  while (msgs.length && msgs[msgs.length - 1].role === "user") msgs.pop();
+  return msgs;
+}
+
+// The most recent slice of history, trimmed to what the server accepts
+function outgoingMessages() {
+  const msgs = history
+    .slice(-MAX_SENT_MESSAGES)
+    .map(({ role, content }) => ({ role, content: content.slice(0, MAX_MESSAGE_CHARS) }));
+  while (msgs.length && msgs[0].role !== "user") msgs.shift();
+  return msgs;
+}
 
 // ——— @-mentions ———
-// Short label inserted by autocomplete, plus accepted aliases for parsing.
-const MENTIONS = {
-  "beit-midrash": { label: "Beit Midrash", aliases: ["beit midrash", "the beit midrash", "everyone"] },
-  hillel: { label: "Hillel", aliases: ["hillel"] },
-  akiva: { label: "Rabbi Akiva", aliases: ["rabbi akiva", "akiva"] },
-  rashi: { label: "Rashi", aliases: ["rashi"] },
-  rambam: { label: "Rambam", aliases: ["rambam", "maimonides"] },
-  ramban: { label: "Ramban", aliases: ["ramban", "nachmanides"] },
-  besht: { label: "Baal Shem Tov", aliases: ["the baal shem tov", "baal shem tov", "besht"] },
-  buber: { label: "Buber", aliases: ["martin buber", "buber"] },
-  heschel: { label: "Heschel", aliases: ["abraham joshua heschel", "heschel"] },
-  sacks: { label: "Rabbi Sacks", aliases: ["rabbi jonathan sacks", "jonathan sacks", "rabbi sacks", "sacks"] },
-};
+// Each sage from /api/sages carries mention: { label, aliases } — the short
+// label inserted by autocomplete, plus accepted aliases for parsing.
+
+function mentionOf(sage) {
+  const m = sage?.mention;
+  if (m && typeof m.label === "string" && m.label) {
+    return { label: m.label, aliases: Array.isArray(m.aliases) ? m.aliases.filter((a) => typeof a === "string" && a) : [] };
+  }
+  return null;
+}
 
 function escapeRegExp(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -37,7 +104,7 @@ function escapeRegExp(s) {
 function findMentions(text) {
   const found = [];
   for (const sage of sages) {
-    const m = MENTIONS[sage.id];
+    const m = mentionOf(sage);
     if (!m) continue;
     const pattern = new RegExp(
       "@(?:" + [m.label, ...m.aliases].map(escapeRegExp).join("|") + ")(?![\\w])",
@@ -74,7 +141,8 @@ const STARTERS = [
 async function loadSages() {
   const res = await fetch("/api/sages");
   sages = await res.json();
-  currentSage = sages[0];
+  const saved = loadStore();
+  currentSage = sages.find((s) => s.id === saved?.sage) ?? sages[0];
   railEl.innerHTML = "";
   for (const sage of sages) {
     const chip = document.createElement("button");
@@ -89,6 +157,8 @@ async function loadSages() {
     chip.addEventListener("click", () => selectSage(sage.id));
     railEl.appendChild(chip);
   }
+  // Restore first — selectSage() saves, and must not overwrite the stored chat
+  restoreConversation(saved);
   selectSage(currentSage.id);
 }
 
@@ -98,6 +168,21 @@ function selectSage(id) {
     chip.classList.toggle("active", chip.dataset.id === currentSage.id);
   }
   blurbEl.textContent = `${currentSage.blurb}`;
+  saveStore();
+}
+
+// A sage who answered in a saved conversation may since have left the table
+function sageById(id) {
+  return (
+    sages.find((s) => s.id === id) ?? {
+      id: id ?? "unknown",
+      name: "A sage",
+      emoji: "📜",
+      years: "",
+      era: "",
+      color: "",
+    }
+  );
 }
 
 // ——— Starters ———
@@ -191,6 +276,7 @@ function addUserMessage(text) {
   div.className = "msg user";
   div.innerHTML = `<div class="msg-body">${renderMarkdown(text)}</div>`;
   chatEl.appendChild(div);
+  return div;
 }
 
 function addSageMessage(sage) {
@@ -219,7 +305,8 @@ function addToolLine(name, inputData) {
 }
 
 function addSources(sources) {
-  if (!sources?.length) return;
+  sources = cleanSources(sources);
+  if (!sources.length) return null;
   const div = document.createElement("div");
   div.className = "sources";
   div.innerHTML =
@@ -231,44 +318,135 @@ function addSources(sources) {
       )
       .join("");
   chatEl.appendChild(div);
+  return div;
 }
 
-function addError(message) {
+// Error line, optionally with a Retry button that runs onRetry once
+function addError(message, onRetry) {
   const div = document.createElement("div");
   div.className = "error-line";
-  div.textContent = `⚠️ ${message}`;
+  const text = document.createElement("span");
+  text.textContent = `⚠️ ${message}`;
+  div.appendChild(text);
+  if (onRetry) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "retry-btn";
+    btn.textContent = "↻ Retry";
+    btn.addEventListener("click", () => {
+      if (busy) return;
+      div.remove();
+      onRetry();
+    });
+    div.appendChild(btn);
+  }
   chatEl.appendChild(div);
+  return div;
+}
+
+// Only the latest failure can be retried — older Retry buttons go away
+function clearRetryButtons() {
+  for (const btn of chatEl.querySelectorAll(".retry-btn")) btn.remove();
 }
 
 function scrollDown() {
   window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
 }
 
+// ——— Conversation state ———
+
+function updateChatTools() {
+  chatToolsEl.hidden = history.length === 0 && !chatEl.querySelector(".msg");
+  newChatBtn.disabled = busy;
+}
+
+function restoreConversation(saved) {
+  const msgs = cleanStoredMessages(saved?.messages);
+  if (!msgs.length) return;
+  history = msgs;
+  welcomeEl.remove();
+  for (const m of history) {
+    if (m.role === "user") {
+      addUserMessage(m.content);
+    } else {
+      addSageMessage(sageById(m.sage)).innerHTML = renderMarkdown(m.content);
+      addSources(m.sources);
+    }
+  }
+  updateChatTools();
+  window.scrollTo({ top: document.body.scrollHeight });
+}
+
+function newConversation() {
+  if (busy) return;
+  history = [];
+  for (const el of [...chatEl.children]) {
+    if (el !== chatToolsEl) el.remove();
+  }
+  chatEl.appendChild(welcomeEl);
+  saveStore();
+  updateChatTools();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  input.focus();
+}
+
+newChatBtn.addEventListener("click", newConversation);
+
+// ——— Send / stop button ———
+
+const SEND_ICON = sendBtn.innerHTML;
+const STOP_ICON =
+  '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor"/></svg>';
+
+function setStreaming(on) {
+  sendBtn.classList.toggle("stop", on);
+  sendBtn.innerHTML = on ? STOP_ICON : SEND_ICON;
+  sendBtn.setAttribute("aria-label", on ? "Stop" : "Send");
+  sendBtn.title = on ? "Stop" : "";
+}
+
+// While streaming, the button stops the answer instead of submitting
+sendBtn.addEventListener("click", (e) => {
+  if (!busy) return;
+  e.preventDefault();
+  controller?.abort();
+});
+
 // ——— Ask flow (SSE over fetch) ———
 
-async function ask(question) {
+// retry: { target } when re-asking a failed question — the user bubble is
+// already on screen, so it isn't added again.
+async function ask(question, retry = null) {
   busy = true;
-  sendBtn.disabled = true;
-  welcomeEl?.remove();
+  setStreaming(true);
+  clearRetryButtons();
+  welcomeEl.remove();
 
-  const target = resolveTarget(question);
+  const target = retry?.target ?? resolveTarget(question);
 
-  addUserMessage(question);
+  if (!retry) addUserMessage(question);
   history.push({ role: "user", content: question });
+  updateChatTools();
   scrollDown();
 
   const bodyEl = addSageMessage(target);
+  const turnEls = [bodyEl.closest(".msg")]; // everything this answer drew
   let answer = "";
+  let sources = [];
+  let failure = null; // error message, if the request failed
   const toolLines = [];
+  controller = new AbortController();
 
   try {
     const res = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sage: target.id, messages: history }),
+      body: JSON.stringify({ sage: target.id, messages: outgoingMessages() }),
+      signal: controller.signal,
     });
 
     if (!res.ok || !res.body) {
+      // e.g. 400 (bad request) or 429 (rate limit) with JSON { error }
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `Request failed (${res.status})`);
     }
@@ -300,31 +478,52 @@ async function ask(question) {
         if (event === "text") {
           // The sage has begun speaking — clear "searching…" lines
           while (toolLines.length) toolLines.pop().remove();
-          answer += payload.delta;
+          answer += payload.delta ?? "";
           bodyEl.innerHTML = renderMarkdown(answer);
           scrollDown();
         } else if (event === "tool") {
           toolLines.push(addToolLine(payload.name, payload.input));
         } else if (event === "sources") {
-          addSources(payload.sources);
+          sources = cleanSources(payload.sources);
+          const el = addSources(sources);
+          if (el) turnEls.push(el);
         } else if (event === "error") {
-          addError(payload.message);
+          failure = payload.message || "Something went wrong.";
         }
       }
     }
   } catch (err) {
-    addError(err.message || "Connection lost. Try again.");
+    // A user-initiated stop isn't an error — keep whatever arrived
+    if (err.name !== "AbortError") failure = err.message || "Connection lost. Try again.";
   } finally {
+    controller = null;
     while (toolLines.length) toolLines.pop().remove();
+    let answerTurn = null;
     if (answer.trim()) {
-      history.push({ role: "assistant", content: answer });
+      answerTurn = { role: "assistant", content: answer, sage: target.id, sources };
+      history.push(answerTurn);
     } else {
       // Nothing came back — don't leave an empty bubble or a dangling user turn
-      bodyEl.closest(".msg")?.remove();
+      for (const el of turnEls) el.remove();
       if (history[history.length - 1]?.role === "user") history.pop();
     }
+
+    if (failure) {
+      addError(failure, () => {
+        // Discard any partial answer so the retry replaces it cleanly
+        if (answerTurn && history[history.length - 1] === answerTurn) {
+          for (const el of turnEls) el.remove();
+          history.pop(); // the partial answer
+          history.pop(); // its question — ask() pushes it again
+        }
+        ask(question, { target });
+      });
+    }
+
+    saveStore();
     busy = false;
-    sendBtn.disabled = false;
+    setStreaming(false);
+    updateChatTools();
     scrollDown();
     input.focus();
   }
@@ -353,7 +552,7 @@ function updateMentionMenu() {
   mentionStart = caret - m[1].length - 1; // position of "@"
 
   const matches = sages.filter((s) => {
-    const info = MENTIONS[s.id];
+    const info = mentionOf(s);
     if (!info) return false;
     if (!query) return true;
     // Match the start of the alias or of any word within it ("ra" → Rashi,
@@ -370,9 +569,9 @@ function updateMentionMenu() {
     .map(
       (s, i) => `
       <button type="button" class="mention-item${i === 0 ? " selected" : ""}"
-              data-id="${s.id}" role="option" style="--accent:${s.color}">
+              data-id="${escapeHtml(s.id)}" role="option" style="--accent:${escapeHtml(s.color ?? "")}">
         <span class="mi-emoji">${s.emoji}</span>
-        <span class="mi-name">${escapeHtml(MENTIONS[s.id].label)}</span>
+        <span class="mi-name">${escapeHtml(mentionOf(s).label)}</span>
         <span class="mi-era">${escapeHtml(s.years)}</span>
       </button>`
     )
@@ -387,7 +586,7 @@ function updateMentionMenu() {
 }
 
 function pickMention(id) {
-  const info = MENTIONS[id];
+  const info = mentionOf(sages.find((s) => s.id === id));
   if (!info || mentionStart < 0) return closeMentionMenu();
   const caret = input.selectionStart ?? input.value.length;
   input.value =
@@ -410,8 +609,8 @@ function moveMenuSelection(delta) {
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-  const q = input.value.trim();
-  if (!q || busy) return;
+  const q = input.value.trim().slice(0, MAX_MESSAGE_CHARS);
+  if (!q || busy || !currentSage) return;
   closeMentionMenu();
   input.value = "";
   input.style.height = "auto";
