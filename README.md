@@ -2,7 +2,7 @@
 
 _Jacob wrestled an angel all night. You can start with a cushion._
 
-A conversational web app for wrestling with Jewish tradition — gently. Ask real, modern questions (doubt, ethics, AI, grief, money, God) and get answers **voiced by sages across 2,000 years** — Hillel, Shammai, Rabbi Akiva, Rashi, Rambam, Ramban, the Baal Shem Tov, Buber, Heschel, and Rabbi Jonathan Sacks — every answer **grounded in real texts fetched live from the [Sefaria](https://www.sefaria.org) library**, with clickable citations so you can read the sources yourself.
+A conversational web app for wrestling with Jewish tradition — gently. Ask real, modern questions (doubt, ethics, AI, grief, money, God) and get answers **voiced by sages across 2,000 years** — Hillel, Rabbi Akiva, Rashi, Rambam, Ramban, the Baal Shem Tov, Buber, Heschel, and Rabbi Jonathan Sacks — every answer **grounded in real texts fetched live from the [Sefaria](https://www.sefaria.org) library**, with clickable citations so you can read the sources yourself.
 
 ## How it works
 
@@ -12,6 +12,8 @@ A conversational web app for wrestling with Jewish tradition — gently. Ask rea
   - `get_text` — fetch the Hebrew + English of any reference (so quotations are exact)
   - `get_commentaries` — list commentaries/midrash/halakhah linked to a verse
 - **Personas** (`sages.js`) — each sage gets a voice prompt with their era, hallmark teachings, and interpretive style, plus shared grounding rules (cite real texts, honor machloket, don't anachronize). "The Beit Midrash" mode stages a cross-era debate.
+
+For how it's built (agent loop, SSE contract, tools, limits, deployment rationale) see [`ARCHITECTURE.md`](ARCHITECTURE.md). Coding agents: start with [`CLAUDE.md`](CLAUDE.md).
 
 ## Setup
 
@@ -66,6 +68,8 @@ public/index.html  Chat UI
 public/style.css   Parchment-and-pillow design
 public/app.js      Streaming client, sage picker, markdown rendering
 test/              node:test suites (unit + HTTP-level with injected fakes)
+ARCHITECTURE.md    How the system works and why
+CLAUDE.md          Working notes for coding agents
 ```
 
 ## Notes
