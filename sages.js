@@ -6,6 +6,7 @@ export const SAGES = [
   {
     id: "beit-midrash",
     color: "#4871bf",
+    mention: { label: "Beit Midrash", aliases: ["beit midrash", "the beit midrash", "everyone"] },
     name: "The Beit Midrash",
     hebrew: "בית מדרש",
     years: "All eras at one table",
@@ -23,6 +24,7 @@ If the user @-mentions specific sages (e.g. "@Hillel @Rambam"), make those the f
   {
     id: "hillel",
     color: "#5a99b7",
+    mention: { label: "Hillel", aliases: ["hillel"] },
     name: "Hillel",
     hebrew: "הלל הזקן",
     years: "c. 110 BCE – 10 CE",
@@ -40,6 +42,7 @@ Shammai's school would push back — and treat that disagreement with respect.`,
   {
     id: "akiva",
     color: "#00827f",
+    mention: { label: "Rabbi Akiva", aliases: ["rabbi akiva", "akiva"] },
     name: "Rabbi Akiva",
     hebrew: "רבי עקיבא",
     years: "c. 50 – 135 CE",
@@ -57,6 +60,7 @@ optimism, love, and the perspective of someone who gave everything for Torah.`,
   {
     id: "rashi",
     color: "#4871bf",
+    mention: { label: "Rashi", aliases: ["rashi"] },
     name: "Rashi",
     hebrew: 'רש"י',
     years: "1040 – 1105, Troyes",
@@ -74,6 +78,7 @@ word by word where it helps. Cite your own commentary on Sefaria (e.g., "Rashi o
   {
     id: "rambam",
     color: "#802f3e",
+    mention: { label: "Rambam", aliases: ["rambam", "maimonides"] },
     name: "Rambam (Maimonides)",
     hebrew: 'רמב"ם',
     years: "1138 – 1204, Córdoba → Cairo",
@@ -92,6 +97,7 @@ by knowledge, and people of knowledge unsettled by faith.`,
   {
     id: "ramban",
     color: "#594176",
+    mention: { label: "Ramban", aliases: ["ramban", "nachmanides"] },
     name: "Ramban (Nachmanides)",
     hebrew: 'רמב"ן',
     years: "1194 – 1270, Girona → Jerusalem",
@@ -110,6 +116,7 @@ poetic depth, and a debater's precision.`,
   {
     id: "besht",
     color: "#97b386",
+    mention: { label: "Baal Shem Tov", aliases: ["the baal shem tov", "baal shem tov", "besht"] },
     name: "The Baal Shem Tov",
     hebrew: 'בעש"ט',
     years: "c. 1698 – 1760, Podolia",
@@ -127,6 +134,7 @@ and the Psalms you loved. Warm, mystical, and utterly unpretentious.`,
   {
     id: "buber",
     color: "#7f85a9",
+    mention: { label: "Buber", aliases: ["martin buber", "buber"] },
     name: "Martin Buber",
     hebrew: "מרטין בובר",
     years: "1878 – 1965, Vienna → Jerusalem",
@@ -144,6 +152,7 @@ Speak philosophically but concretely, always returning abstractions to the momen
   {
     id: "heschel",
     color: "#ab4e66",
+    mention: { label: "Heschel", aliases: ["abraham joshua heschel", "heschel"] },
     name: "Abraham Joshua Heschel",
     hebrew: "אברהם יהושע השל",
     years: "1907 – 1972, Warsaw → New York",
@@ -161,6 +170,7 @@ of good is not evil but indifference, and that prayer is meaningless unless it i
   {
     id: "sacks",
     color: "#004e5f",
+    mention: { label: "Rabbi Sacks", aliases: ["rabbi jonathan sacks", "jonathan sacks", "rabbi sacks", "sacks"] },
     name: "Rabbi Jonathan Sacks",
     hebrew: "הרב יונתן זקס",
     years: "1948 – 2020, London",
@@ -177,6 +187,8 @@ the home we build together. You quote Torah alongside Darwin, Wittgenstein, and 
 arguments elegantly, often in threes, ending with a turn toward responsibility and hope.`,
   },
 ];
+
+export const SAGE_IDS = SAGES.map((s) => s.id);
 
 const CORE_RULES = `
 You are part of "Pillow Wrestling with Judaism" — a place where people bring real, modern questions
