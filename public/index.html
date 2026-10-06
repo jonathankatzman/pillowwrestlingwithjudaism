@@ -31,6 +31,12 @@
     </section>
 
     <main class="chat" id="chat" aria-live="polite">
+      <div class="chat-tools" id="chatTools" hidden>
+        <button type="button" class="new-chat" id="newChatBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          New conversation
+        </button>
+      </div>
       <div class="welcome" id="welcome">
         <h2>Bring a real question.</h2>
         <p>
@@ -51,6 +57,7 @@
         <textarea
           id="input"
           rows="1"
+          maxlength="4000"
           placeholder="Ask anything — or summon someone with @ (try @Rashi)…"
           aria-label="Your question"
         ></textarea>

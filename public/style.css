@@ -375,10 +375,60 @@ html, body {
 
 .error-line {
   align-self: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  text-align: center;
   color: #802f3e;
   font-style: italic;
   font-size: 0.9rem;
 }
+
+.retry-btn {
+  border: 1.5px solid rgba(128, 47, 62, 0.45);
+  background: var(--card);
+  color: #802f3e;
+  font-family: var(--font-body);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.retry-btn:hover { background: #fbeff1; border-color: #802f3e; }
+
+/* "New conversation" — a quiet pill at the head of the thread */
+
+.chat-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -6px;
+}
+
+.chat-tools[hidden] { display: none; }
+
+.new-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px dashed rgba(72, 113, 191, 0.5);
+  background: transparent;
+  color: var(--navy);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  padding: 5px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.new-chat:hover:not(:disabled) { background: var(--sky-deep); border-color: var(--link-blue); }
+.new-chat:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ——— Composer ——— */
 
@@ -432,6 +482,10 @@ html, body {
 
 .composer button:hover:not(:disabled) { background: var(--link-blue); transform: scale(1.05); }
 .composer button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* While a sage is speaking, the send button becomes a stop button */
+.composer button.stop { background: #802f3e; color: #fbeff1; }
+.composer button.stop:hover:not(:disabled) { background: #9a3a4c; }
 
 .fine-print {
   margin: 10px 4px 0;
@@ -497,7 +551,7 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .msg, .tool-line { animation: none; }
   .tool-line .dot { animation: none; opacity: 1; }
-  .sage-chip, .composer button { transition: none; }
+  .sage-chip, .composer button, .new-chat, .retry-btn { transition: none; }
 }
 
 /* Hover lifts only where there's a real pointer — no sticky hover on touch */
@@ -505,6 +559,9 @@ html, body {
   .sage-chip:hover { transform: none; border-color: var(--card-edge); }
   .sage-chip.active:hover { border-color: var(--accent); }
   .composer button:hover:not(:disabled) { background: var(--navy); transform: none; }
+  .composer button.stop:hover:not(:disabled) { background: #802f3e; }
+  .new-chat:hover:not(:disabled) { background: transparent; border-color: rgba(72, 113, 191, 0.5); }
+  .retry-btn:hover { background: var(--card); border-color: rgba(128, 47, 62, 0.45); }
 }
 
 @media (max-width: 560px) {
@@ -543,6 +600,10 @@ html, body {
   .msg { max-width: 100%; padding: 13px 16px; border-radius: 20px; }
 
   .sources { max-width: 100%; }
+
+  .chat-tools { margin-bottom: -4px; }
+  .new-chat { padding: 7px 13px; }
+  .retry-btn { padding: 6px 14px; }
 
   .composer { padding: 8px 8px 8px 16px; border-radius: 22px; }
   .composer textarea { max-height: 120px; }
