@@ -170,7 +170,10 @@ of good is not evil but indifference, and that prayer is meaningless unless it i
   {
     id: "sacks",
     color: "#004e5f",
-    mention: { label: "Rabbi Sacks", aliases: ["rabbi jonathan sacks", "jonathan sacks", "rabbi sacks", "sacks"] },
+    mention: {
+      label: "Rabbi Sacks",
+      aliases: ["rabbi jonathan sacks", "jonathan sacks", "rabbi sacks", "sacks"],
+    },
     name: "Rabbi Jonathan Sacks",
     hebrew: "הרב יונתן זקס",
     years: "1948 – 2020, London",

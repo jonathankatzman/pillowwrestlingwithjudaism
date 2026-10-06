@@ -1,0 +1,8 @@
+node_modules/
+package-lock.json
+coverage/
+.vercel/
+# Hand-aligned markup/CSS (column-aligned comments, compact rules); formatting
+# these would be pure churn. JS in public/ is still checked.
+public/*.html
+public/*.css

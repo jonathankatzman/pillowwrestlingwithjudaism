@@ -1,6 +1,6 @@
 # 🛏️ Pillow Wrestling with Judaism
 
-*Jacob wrestled an angel all night. You can start with a cushion.*
+_Jacob wrestled an angel all night. You can start with a cushion._
 
 A conversational web app for wrestling with Jewish tradition — gently. Ask real, modern questions (doubt, ethics, AI, grief, money, God) and get answers **voiced by sages across 2,000 years** — Hillel, Shammai, Rabbi Akiva, Rashi, Rambam, Ramban, the Baal Shem Tov, Buber, Heschel, and Rabbi Jonathan Sacks — every answer **grounded in real texts fetched live from the [Sefaria](https://www.sefaria.org) library**, with clickable citations so you can read the sources yourself.
 
@@ -15,7 +15,7 @@ A conversational web app for wrestling with Jewish tradition — gently. Ask rea
 
 ## Setup
 
-Requires Node 18+.
+Requires Node 20+ (see `.nvmrc`; 22 recommended).
 
 ```bash
 npm install
@@ -24,6 +24,17 @@ npm start                # → http://localhost:3000
 ```
 
 Get an API key at [platform.claude.com](https://platform.claude.com). The Sefaria API requires no key.
+
+### Development
+
+```bash
+npm run dev              # restart on file changes
+npm test                 # node:test suite (fakes for Claude + Sefaria; no network, no API key)
+npm run lint             # ESLint
+npm run format           # Prettier (npm run format:check to verify only)
+```
+
+CI (`.github/workflows/ci.yml`) runs lint, format check and tests on Node 20 and 22.
 
 ## Deploy to Vercel
 
@@ -54,6 +65,7 @@ sages.js           Sage personas (incl. @-mention labels/aliases) + system promp
 public/index.html  Chat UI
 public/style.css   Parchment-and-pillow design
 public/app.js      Streaming client, sage picker, markdown rendering
+test/              node:test suites (unit + HTTP-level with injected fakes)
 ```
 
 ## Notes
@@ -61,4 +73,4 @@ public/app.js      Streaming client, sage picker, markdown rendering
 - Conversation history lives in the browser; the server is stateless per request. It keeps the most recent 30 messages (≈40k characters) and rejects user messages over 4,000 characters.
 - `GET /api/health` → `{"ok":true}`; `GET /api/sages` lists the personas, including each one's `mention: {label, aliases}` used for @-mentions.
 - The system prompt is cached (`cache_control: ephemeral`) so multi-turn chats stay fast and cheap.
-- Voices are AI interpretations of historical thinkers, offered with affection and chutzpah. For practical halakhic decisions — *aseh lecha rav*, get yourself a teacher ([Pirkei Avot 1:6](https://www.sefaria.org/Pirkei_Avot.1.6)).
+- Voices are AI interpretations of historical thinkers, offered with affection and chutzpah. For practical halakhic decisions — _aseh lecha rav_, get yourself a teacher ([Pirkei Avot 1:6](https://www.sefaria.org/Pirkei_Avot.1.6)).

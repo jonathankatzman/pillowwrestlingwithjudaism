@@ -64,7 +64,15 @@ export function createApp({
   app.get("/api/sages", (_req, res) => {
     res.json(
       SAGES.map(({ id, name, hebrew, years, era, emoji, blurb, color, mention }) => ({
-        id, name, hebrew, years, era, emoji, blurb, color, mention,
+        id,
+        name,
+        hebrew,
+        years,
+        era,
+        emoji,
+        blurb,
+        color,
+        mention,
       }))
     );
   });
@@ -127,6 +135,21 @@ export function createApp({
     }
   });
 
+  // Body-parser failures (malformed JSON, oversize body) answer in JSON like the
+  // other API errors instead of Express's default HTML page (which includes a
+  // stack trace outside production).
+  app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    const status = err?.status ?? err?.statusCode;
+    if (status >= 400 && status < 500) {
+      return res.status(status).json({
+        error: err.type === "entity.too.large" ? "request body too large" : "invalid JSON body",
+      });
+    }
+    console.error("unhandled error:", err);
+    res.status(500).json({ error: "internal error" });
+  });
+
   return app;
 }
 
@@ -146,7 +169,9 @@ if (!process.env.VERCEL && isMain) {
   app.listen(PORT, () => {
     console.log(`🛏️  Pillow Wrestling with Judaism → http://localhost:${PORT}`);
     if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
-      console.warn("⚠️  No ANTHROPIC_API_KEY in env — questions will only work if an `ant auth login` profile is configured. Otherwise add a key to .env.");
+      console.warn(
+        "⚠️  No ANTHROPIC_API_KEY in env — questions will only work if an `ant auth login` profile is configured. Otherwise add a key to .env."
+      );
     }
   });
 }
