@@ -51,7 +51,8 @@ on Node 20 and 22.
   `localStorage` access in try/catch.
 - **Tests must not hit the network.** Stub `fetch` / inject a fake client like the existing tests.
 - `public/*.html` and `public/*.css` are intentionally excluded from Prettier (hand-aligned).
-- Sefaria's `search-wrapper` endpoint is undocumented; if search breaks, suspect it first.
+- Sefaria's `search-wrapper/es8` endpoint is undocumented; if search breaks, suspect it first
+  and compare with what `Sefaria/sefaria-mcp` calls.
 - The sandbox used to build this couldn't reach Sefaria, so live behavior was never tested
   end to end. After changing the model or tools, verify with a real key and a few questions.
 - Don't commit `.env` or put keys in code; Vercel holds `ANTHROPIC_API_KEY`.

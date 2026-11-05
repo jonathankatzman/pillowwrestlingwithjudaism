@@ -160,13 +160,13 @@ describe("Sefaria API helpers (stubbed fetch)", () => {
 
     assert.equal(fetchMock.mock.callCount(), 1);
     const [url, init] = fetchMock.mock.calls[0].arguments;
-    assert.equal(url, `${SEFARIA}/api/search-wrapper`);
+    assert.equal(url, `${SEFARIA}/api/search-wrapper/es8`);
     assert.equal(init.method, "POST");
     assert.ok(init.signal instanceof AbortSignal);
     assert.equal(init.headers.accept, "application/json");
     const body = JSON.parse(init.body);
     assert.equal(body.query, "hateful to your fellow");
-    assert.equal(body.size, 15, "size is capped at 15");
+    assert.equal(body.size, 30, "size is capped at 15, over-fetched 2x for dedupe");
     assert.equal(body.type, "text");
 
     assert.deepEqual(out, {
@@ -193,6 +193,35 @@ describe("Sefaria API helpers (stubbed fetch)", () => {
     assert.equal(out.results[0].ref, "X 1:1");
     assert.equal(out.results[0].snippet.length, 300);
     assert.equal(out.results[0].category, undefined);
+  });
+
+  it("searchSefaria dedupes refs, keeps the best-ranked hit, and caps at size", async (t) => {
+    const hit = (ref, snippet) => ({
+      _source: { ref, path: "Tanakh" },
+      highlight: { naive_lemmatizer: [snippet] },
+    });
+    const fetchMock = t.mock.method(globalThis, "fetch", async () =>
+      jsonResponse({
+        hits: {
+          hits: [
+            hit("A 1:1", "first A"),
+            hit("A 1:1", "second A"),
+            hit("B 1:1", "B"),
+            hit("A 1:1", "third A"),
+            hit("C 1:1", "C"),
+          ],
+        },
+      })
+    );
+    const out = await searchSefaria({ query: "x", size: 2 });
+    assert.equal(JSON.parse(fetchMock.mock.calls[0].arguments[1].body).size, 4);
+    assert.deepEqual(
+      out.results.map((r) => [r.ref, r.snippet]),
+      [
+        ["A 1:1", "first A"],
+        ["B 1:1", "B"],
+      ]
+    );
   });
 
   it("searchSefaria returns a note when there are no hits", async (t) => {
