@@ -91,7 +91,7 @@ Three tools are exposed to Claude (definitions in `TOOLS`):
 
 | tool               | Sefaria endpoint                                                                      | returns                                            |
 | ------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `search_sefaria`   | `POST /api/search-wrapper`                                                            | refs, category path, snippet (≤15 hits)            |
+| `search_sefaria`   | `POST /api/search-wrapper/es8`                                                        | distinct refs, category path, snippet (≤15)        |
 | `get_text`         | `GET /api/v3/texts/{ref}?version=primary&version=translation&return_format=text_only` | Hebrew + English (≤2500 chars each), canonical URL |
 | `get_commentaries` | `GET /api/related/{ref}`                                                              | related refs grouped by category (≤12 each)        |
 
@@ -101,8 +101,11 @@ Three tools are exposed to Claude (definitions in `TOOLS`):
   Vercel this cache is per instance and short-lived, which is fine.
 - `refToUrl` produces Sefaria's canonical URL form (`Genesis.32.25`, `Pirkei_Avot.1.14`),
   matching what the system prompt tells the model to write.
-- ⚠️ `search-wrapper` is an undocumented Sefaria endpoint used by their own site. If search
-  breaks, check it first.
+- ⚠️ `search-wrapper/es8` is an undocumented Sefaria endpoint used by their own site and by
+  Sefaria's official MCP server (`Sefaria/sefaria-mcp`, which is a good reference if it
+  changes). If search breaks, check it first. Each translation is a separate hit, so search
+  over-fetches 2x and dedupes by ref. Matching is phrase-like (`slop: 10`): long phrases
+  often return nothing, which is why the tool description asks for 2-4 keywords.
 
 ### `lib/validate.js`: request limits
 
